@@ -1,81 +1,127 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-let paddleHeight = 100;
-let paddleWidth = 10;
-let playerY = canvas.height / 2 - paddleHeight / 2;
-let aiY = canvas.height / 2 - paddleHeight / 2;
+// Paddle settings
+const paddleWidth = 20;
+const paddleHeight = 120;
+let leftY = canvas.height / 2 - paddleHeight / 2;
+let rightY = canvas.height / 2 - paddleHeight / 2;
+const paddleSpeed = 50;
+
+// Ball settings
 let ballX = canvas.width / 2;
 let ballY = canvas.height / 2;
-let ballSpeedX = 5;
-let ballSpeedY = 5;
+let ballRadius = 10;
+let ballDX = 5;
+let ballDY = -5;
 
-function drawRect(x, y, w, h, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
+// Score
+let leftScore = 0;
+let rightScore = 0;
+
+// Draw paddles
+function drawPaddle(x, y) {
+  ctx.fillStyle = "black";
+  ctx.fillRect(x, y, paddleWidth, paddleHeight);
 }
 
-function drawBall(x, y, r, color) {
-  ctx.fillStyle = color;
+// Draw ball
+function drawBall() {
+  ctx.fillStyle = "blue";
   ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
   ctx.fill();
 }
 
+// Draw score
+function drawScore() {
+  ctx.fillStyle = "blue";
+  ctx.font = "24px Bahnschrift";
+  ctx.textAlign = "center";
+  ctx.fillText(`Left player: ${leftScore}  Right player: ${rightScore}`, canvas.width / 2, 40);
+}
+
+// Update game state
 function update() {
-  ballX += ballSpeedX;
-  ballY += ballSpeedY;
+  ballX += ballDX;
+  ballY += ballDY;
 
-  // Bounce off top/bottom
-  if (ballY <= 0 || ballY >= canvas.height) {
-    ballSpeedY *= -1;
+  // Top and bottom collision
+  if (ballY + ballRadius >= canvas.height || ballY - ballRadius <= 0) {
+    ballDY *= -1;
   }
 
-  // AI paddle follows ball
-  aiY += (ballY - (aiY + paddleHeight / 2)) * 0.09;
+  // Left boundary — right scores
+  if (ballX - ballRadius < 0) {
+    rightScore++;
+    resetBall();
+  }
 
-  // Collision with paddles
+  // Right boundary — left scores
+  if (ballX + ballRadius > canvas.width) {
+    leftScore++;
+    resetBall();
+  }
+
+  // Left paddle collision
   if (
-    ballX <= paddleWidth &&
-    ballY > playerY &&
-    ballY < playerY + paddleHeight
+    ballX - ballRadius <= 40 &&
+    ballY >= leftY &&
+    ballY <= leftY + paddleHeight
   ) {
-    ballSpeedX *= -1;
+    ballDX = 5;
+    ballX = 40 + ballRadius;
   }
 
+  // Right paddle collision
   if (
-    ballX >= canvas.width - paddleWidth &&
-    ballY > aiY &&
-    ballY < aiY + paddleHeight
+    ballX + ballRadius >= canvas.width - 40 &&
+    ballY >= rightY &&
+    ballY <= rightY + paddleHeight
   ) {
-    ballSpeedX *= -1;
-  }
-
-  // Reset if ball goes off screen
-  if (ballX < 0 || ballX > canvas.width) {
-    ballX = canvas.width / 2;
-    ballY = canvas.height / 2;
-    ballSpeedX = -ballSpeedX;
+    ballDX = -5;
+    ballX = canvas.width - 40 - ballRadius;
   }
 }
 
+function resetBall() {
+  ballX = canvas.width / 2;
+  ballY = canvas.height / 2;
+  ballDX *= -1;
+}
+
+// Draw everything
 function draw() {
-  drawRect(0, 0, canvas.width, canvas.height, "black");
-  drawRect(0, playerY, paddleWidth, paddleHeight, "white");
-  drawRect(canvas.width - paddleWidth, aiY, paddleWidth, paddleHeight, "white");
-  drawBall(ballX, ballY, 10, "white");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawScore();
+  drawPaddle(20, leftY);
+  drawPaddle(canvas.width - 40, rightY);
+  drawBall();
 }
 
+// Game loop
 function gameLoop() {
   update();
   draw();
   requestAnimationFrame(gameLoop);
 }
 
-// Mouse control
-canvas.addEventListener("mousemove", (e) => {
-  let rect = canvas.getBoundingClientRect();
-  playerY = e.clientY - rect.top - paddleHeight / 2;
+// Controls
+document.addEventListener("keydown", (e) => {
+  switch (e.key.toLowerCase()) {
+    case "w":
+      leftY = Math.max(0, leftY - paddleSpeed);
+      break;
+    case "s":
+      leftY = Math.min(canvas.height - paddleHeight, leftY + paddleSpeed);
+      break;
+    case "o":
+      rightY = Math.max(0, rightY - paddleSpeed);
+      break;
+    case "l":
+      rightY = Math.min(canvas.height - paddleHeight, rightY + paddleSpeed);
+      break;
+  }
 });
 
 gameLoop();
